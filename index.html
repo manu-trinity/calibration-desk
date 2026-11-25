@@ -1,0 +1,103 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#102a2d">
+  <title>Calibration Desk</title>
+  <link rel="stylesheet" href="./styles.css">
+  <script defer src="./config.js"></script>
+  <script type="module" src="./app.js"></script>
+</head>
+<body>
+<header class="masthead">
+  <div class="frame masthead-content">
+    <div class="brand"><span class="brand-mark" aria-hidden="true">◴</span> Calibration Desk</div>
+    <button type="button" id="sign-out" class="quiet" hidden>Sign out</button>
+  </div>
+</header>
+<main class="frame">
+  <section class="intro">
+    <h1>Calibration reminders</h1>
+    <p>Schedule and send email reminders for upcoming equipment calibrations.</p>
+  </section>
+  <p id="notice" class="notice" role="status" hidden></p>
+  <section id="setup" class="panel access" hidden>
+    <h2>Connect the demo</h2>
+    <p>Add the Supabase project URL and publishable key to <code>docs/config.js</code>, then follow the deployment steps in the project README.</p>
+  </section>
+  <section id="login" class="panel access" hidden>
+    <h2>Sign in</h2>
+    <form id="login-form">
+      <label>Email <input type="email" name="email" autocomplete="username" required></label>
+      <label>Password <input type="password" name="password" autocomplete="current-password" required></label>
+      <button class="primary">Sign in</button>
+    </form>
+  </section>
+  <div id="workspace" class="workspace" hidden>
+    <section class="panel">
+      <div class="section-heading"><h2>New reminder</h2></div>
+      <form id="reminder-form">
+        <label>Component name <input name="component" maxlength="120" placeholder="e.g. FT-022 Flow meter" required></label>
+        <div class="pair">
+          <label>Calibration date <input name="calibrated_on" type="date" required></label>
+          <label>Expiry date <input name="expires_on" type="date" required></label>
+        </div>
+        <div class="pair">
+          <label>To <input name="recipient" type="email" maxlength="254" placeholder="name@example.com" required></label>
+          <label>CC <span class="optional">(optional)</span> <input name="cc" type="email" maxlength="254" placeholder="name@example.com"></label>
+        </div>
+        <label>Reminder option
+          <select name="mode">
+            <option value="exact">Specific date and time</option>
+            <option value="before">Days before expiry</option>
+            <option value="manual">Manual send only</option>
+          </select>
+        </label>
+        <div id="exact-fields">
+          <label>Send date and time <input name="when" type="datetime-local" required></label>
+        </div>
+        <div id="relative-fields" class="pair" hidden>
+          <label>Days before expiry <input name="days" type="number" min="0" max="730" step="1" value="30"></label>
+          <label>Send time <input name="clock" type="time" value="09:00"></label>
+        </div>
+        <p class="hint" id="time-zone"></p>
+        <button class="primary" id="preview-button">Preview email</button>
+      </form>
+      <section id="preview" class="preview" aria-labelledby="preview-title" hidden>
+        <h3 id="preview-title">Email preview</h3>
+        <dl id="preview-meta"></dl>
+        <pre id="preview-body"></pre>
+        <button class="primary" id="save" type="button">Save reminder</button>
+      </section>
+    </section>
+    <section class="panel queue">
+      <div class="section-heading">
+        <h2>Reminder log</h2>
+        <button type="button" id="refresh" class="secondary">Refresh</button>
+      </div>
+      <div class="metrics" aria-label="Reminder totals">
+        <div><strong id="waiting-count">0</strong>Waiting</div>
+        <div><strong id="sent-count">0</strong>Sent</div>
+        <div><strong id="failed-count">0</strong>Failed</div>
+      </div>
+      <p id="empty" class="empty">Saved reminders will appear here.</p>
+      <ul class="jobs" id="jobs"></ul>
+    </section>
+  </div>
+</main>
+<template id="job-template">
+  <li class="job">
+    <div class="job-heading"><h3></h3><span class="badge"></span></div>
+    <p class="job-schedule"></p>
+    <p class="job-dates"></p>
+    <p class="job-to"></p>
+    <p class="job-error" hidden></p>
+    <div class="job-actions" hidden>
+      <button type="button" class="secondary send">Send now</button>
+      <button type="button" class="secondary cancel">Cancel reminder</button>
+    </div>
+  </li>
+</template>
+</body>
+</html>
