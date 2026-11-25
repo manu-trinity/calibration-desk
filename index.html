@@ -35,6 +35,13 @@
     </form>
   </section>
   <div id="workspace" class="workspace" hidden>
+    <section class="panel gmail-panel" aria-labelledby="gmail-title">
+      <div><h2 id="gmail-title">Gmail sender</h2><p id="gmail-status" class="hint" role="status">Checking Gmail connection…</p></div>
+      <div class="gmail-actions">
+        <button type="button" id="gmail-connect" class="primary" hidden>Connect Gmail</button>
+        <button type="button" id="gmail-disconnect" class="secondary" hidden>Disconnect</button>
+      </div>
+    </section>
     <section class="panel">
       <div class="section-heading"><h2>New reminder</h2></div>
       <form id="reminder-form">

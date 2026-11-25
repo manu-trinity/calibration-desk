@@ -78,3 +78,15 @@ button { padding: 9px 14px; min-height: 42px; border: 1px solid transparent; bor
 @media (max-width: 390px) {
   .pair { grid-template-columns: minmax(0, 1fr); }
 }
+
+.gmail-panel {
+  grid-column: 1 / -1;
+  display: flex;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+}
+.gmail-panel h2 { margin-bottom: 5px; }
+.gmail-panel p { overflow-wrap: anywhere; }
+.gmail-actions { display: flex; flex-wrap: wrap; gap: 8px; }

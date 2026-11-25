@@ -10,6 +10,7 @@ const dateTime = new Intl.DateTimeFormat(undefined, {
 });
 const day = new Intl.DateTimeFormat(undefined, { dateStyle: "medium", timeZone: "UTC" });
 let token = sessionStorage.getItem(sessionKey);
+let gmailSender = null;
 let previewInput;
 let listVersion = 0;
 
@@ -28,15 +29,16 @@ function showSession(nextToken) {
   $("sign-out").hidden = !token;
   if (!token) {
     listVersion++;
+    renderGmail(null, "Checking Gmail connection…");
     form.reset();
     updateMode();
     renderJobs([]);
   }
 }
 
-async function call(action, fields = {}) {
+async function call(action, fields = {}, endpoint = "reminders") {
   const currentToken = token;
-  const response = await fetch(`${base}/functions/v1/reminders`, {
+  const response = await fetch(`${base}/functions/v1/${endpoint}`, {
     method: "POST",
     headers: {
       apikey: publishableKey,
@@ -51,6 +53,38 @@ async function call(action, fields = {}) {
   if (!response.ok) throw new Error(result.error || "The request could not be completed.");
   return result;
 }
+
+function renderGmail(email, message) {
+  if (gmailSender !== email) hidePreview();
+  gmailSender = email;
+  $("gmail-status").textContent = message ?? (email ? `Sending as ${email}` : "Connect Gmail to create a reminder.");
+  $("gmail-connect").hidden = Boolean(message);
+  $("gmail-connect").textContent = email ? "Reconnect Gmail" : "Connect Gmail";
+  $("gmail-disconnect").hidden = !email;
+  $("preview-button").disabled = !email;
+}
+
+async function refreshGmail() {
+  try {
+    const result = await call("status", {}, "gmail-connect");
+    renderGmail(result.email);
+  } catch (error) {
+    if (token) renderGmail(null, `${error.message} Use Refresh to try again.`);
+  }
+}
+
+$("gmail-connect").addEventListener("click", event => run(event.currentTarget, async () => {
+  const result = await call("start", {}, "gmail-connect");
+  window.location.assign(result.url);
+}));
+$("gmail-disconnect").addEventListener("click", event => {
+  if (!window.confirm("Disconnect Gmail? Pending reminders using this account need it reconnected before their send time.")) return;
+  run(event.currentTarget, async () => {
+    await call("disconnect", {}, "gmail-connect");
+    renderGmail(null);
+    notice("Gmail disconnected.");
+  });
+});
 
 async function run(button, operation) {
   button.disabled = true;
@@ -149,7 +183,8 @@ function renderJobs(jobs) {
       : job.scheduled_at ? `Scheduled for ${format(job.scheduled_at)}` : "Manual send only";
     within(".job-dates").textContent =
       `Calibrated ${day.format(new Date(job.calibrated_on))} · Expires ${day.format(new Date(job.expires_on))}`;
-    within(".job-to").textContent = `To ${job.recipient}${job.cc ? ` · CC ${job.cc}` : ""}`;
+    within(".job-to").textContent =
+      `${job.gmail_from ? `From ${job.gmail_from} · ` : ""}To ${job.recipient}${job.cc ? ` · CC ${job.cc}` : ""}`;
     within(".job-error").hidden = !job.error;
     within(".job-error").textContent = job.error ?? "";
     const ready = job.status === "pending" && job.attempts === 0;
@@ -194,7 +229,7 @@ $("login-form").addEventListener("submit", event => {
     }
     loginForm.reset();
     showSession(result.access_token);
-    await refresh();
+    await Promise.all([refresh(), refreshGmail()]);
   });
 });
 
@@ -202,7 +237,8 @@ $("sign-out").addEventListener("click", () => {
   showSession(null);
   notice("");
 });
-$("refresh").addEventListener("click", event => run(event.currentTarget, refresh));
+$("refresh").addEventListener("click", event =>
+  run(event.currentTarget, () => Promise.all([refresh(), refreshGmail()])));
 form.addEventListener("input", hidePreview);
 field("mode").addEventListener("change", updateMode);
 form.addEventListener("submit", event => {
@@ -213,7 +249,7 @@ form.addEventListener("submit", event => {
     if (JSON.stringify(inputs()) !== JSON.stringify(snapshot)) {
       throw new Error("The form changed. Preview the updated reminder before saving.");
     }
-    previewInput = { ...snapshot, id: crypto.randomUUID() };
+    previewInput = { ...snapshot, id: crypto.randomUUID(), preview_from: job.from };
     showPreview(job);
   });
 });
@@ -231,8 +267,20 @@ if (!base || !publishableKey) {
 } else {
   $("time-zone").textContent = `Time zone: ${timeZone}`;
   updateMode();
+  renderGmail(null, "Checking Gmail connection…");
   showSession(token);
-  if (token) refresh().catch(error => notice(error.message, true));
+  const url = new URL(window.location.href);
+  const result = url.searchParams.get("gmail");
+  if (result) {
+    url.searchParams.delete("gmail");
+    history.replaceState(null, "", url);
+    notice(result === "connected" ? "Gmail connected." :
+      "Gmail connection was not completed. Try connecting again.", result !== "connected");
+  }
+  if (token) {
+    refreshGmail();
+    refresh().catch(error => notice(error.message, true));
+  }
   document.addEventListener("visibilitychange", () => {
     if (token && !document.hidden) refresh().catch(error => notice(error.message, true));
   });
